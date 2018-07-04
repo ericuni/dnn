@@ -1,32 +1,39 @@
 #!/Library/Frameworks/Python.framework/Versions/3.6/bin/python3
 
+import sys
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
-from sklearn.metrics import confusion_matrix
+import sklearn as sk
+import logging
+from udf import *
 
-print(tf.__version__)
+logging.basicConfig(level = logging.DEBUG, format = '%(levelname)s %(asctime)s [%(filename)s][%(lineno)d][%(funcName)s] %(message)s')
+log = logging.getLogger()
+
+log.info('tensorflow version: {0}'.format(tf.__version__))
 
 # data set
 from tensorflow.examples.tutorials.mnist import input_data
 data = input_data.read_data_sets("data/MNIST/", one_hot = True)
 ## 每个label 是一个10 个元素的vector, eg: [0. 0. 0. 0. 0. 0. 0. 1. 0. 0.] 将 7 点亮了, 因此label 是 7
 
-print('data set brief:')
-print('train set:', data.train.images.shape, data.train.labels.shape)
-print('test set:', data.test.images.shape, data.test.labels.shape)
-print('validation set:', data.validation.images.shape, data.validation.labels.shape)
+log.info('data set brief:')
+log.info('train set: {0} {1}'.format(data.train.images.shape, data.train.labels.shape))
+log.info('test set: {0} {1}'.format(data.test.images.shape, data.test.labels.shape))
+log.info('validation set: {0} {1}'.format(data.validation.images.shape, data.validation.labels.shape))
 
-## 为了方便之后的比较, 把hot vector 转换为一个数字
-data.test.cls = np.array([np.argmax(label) for label in data.test.labels])
-print(data.test.cls[0:5])
-
-# model definition
 img_size = 28
 img_size_flat = img_size * img_size
 img_shape = (img_size, img_size)
 num_classes = 10 ## 0 - 9 共10 个数字
 
+## 为了方便之后的比较, 把hot vector 转换为一个数字
+data.test.cls = np.array([np.argmax(label) for label in data.test.labels])
+log.info(data.test.cls[0:5])
+plot_images('test set example', images = data.test.images[0:9], img_shape = img_shape, cls_true = data.test.cls[0:9])
+
+# model definition
 x = tf.placeholder(tf.float32, [None, img_size_flat]) ## num * 784
 y_true = tf.placeholder(tf.float32, [None, num_classes]) ## num * 10
 y_true_cls = tf.placeholder(tf.int64, [None]) ## num * 1
@@ -49,13 +56,42 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 batch_size = 100
 session = tf.Session()
 session.run(tf.global_variables_initializer())
+feed_dict_test = {x: data.test.images, y_true_cls: data.test.cls}
 for i in range(100):
-    x_batch, y_batch = data.train.next_batch(batch_size)
-    feed_dict_train = {x: x_batch, y_true: y_batch}
-    session.run(optimizer, feed_dict = feed_dict_train)
+	x_batch, y_batch = data.train.next_batch(batch_size)
+	feed_dict_train = {x: x_batch, y_true: y_batch}
+	session.run(optimizer, feed_dict = feed_dict_train)
+	if i % 10 == 0:
+		acc = session.run(accuracy, feed_dict = feed_dict_test)
+		log.info('accuracy after {0} iterations: {1}'.format(i, acc))
 
 # evaluation
-feed_dict_test = {x: data.test.images, y_true_cls: data.test.cls}
 acc = session.run(accuracy, feed_dict = feed_dict_test)
-print('Accuracy on test set:', acc)
+log.info('Accuracy on test set: {0}'.format(acc))
+
+cls_true = data.test.cls
+cls_pred = session.run(y_pred_cls, feed_dict = feed_dict_test)
+cm = sk.metrics.confusion_matrix(y_true = cls_true, y_pred = cls_pred)
+log.info('Confusion matrix:\n {0}'.format(cm))
+plot_confusion_matrix('Confusion matrix', cm, num_classes)
+
+## plot error imgs
+correct, cls_pred = session.run([correct_prediction, y_pred_cls], feed_dict = feed_dict_test)
+incorrect = (correct == False)
+images = data.test.images[incorrect]
+cls_pred = cls_pred[incorrect]
+cls_true = data.test.cls[incorrect]
+plot_images('error example', images = images[0:9], img_shape = img_shape, cls_true = cls_true[0:9], cls_pred = cls_pred[0:9])
+
+'''
+plot weights
+Positive weights are red and negative weights are blue. These weights can be intuitively understood as image-filters.
+For example, the weights used to determine if an image shows a zero-digit have a positive reaction (red) to an image of a circle, and have a negative reaction (blue) to images with content in the centre of the circle.
+Similarly, the weights used to determine if an image shows a one-digit react positively (red) to a vertical line in the centre of the image, and react negatively (blue) to images with content surrounding that line.
+After training on several thousand images, the weights become more difficult to interpret because they have to recognize many variations of how digits can be written.
+'''
+w = session.run(weights)
+plot_weights('Weights', w, img_shape)
+
+sys.exit(0)
 
