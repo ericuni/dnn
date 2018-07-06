@@ -33,7 +33,7 @@ log.info(data.test.cls[0:5])
 udf.plot_images('test set example', images = data.test.images[0:9], img_shape = img_shape, cls_true = data.test.cls[0:9])
 
 # model definition
-x = tf.placeholder(tf.float32, [None, img_size_flat]) ## num * 784
+x = tf.placeholder(tf.float32, [None, img_size_flat]) ## num * 784, None means that the tensor may hold an arbitrary number of images
 y_true = tf.placeholder(tf.float32, [None, num_classes]) ## num * 10
 y_true_cls = tf.placeholder(tf.int64, [None]) ## num * 1
 
@@ -44,7 +44,7 @@ logits = tf.matmul(x, weights) + bias
 y_pred = tf.nn.softmax(logits)
 y_pred_cls = tf.argmax(y_pred, axis = 1)
 
-cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(logits = logits, labels = y_true) ## ## 对logits 取softmax, 然后和 y_true 计算cross entropy
+cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(logits = logits, labels = y_true) ## 对logits 取softmax, 然后和 y_true 计算cross entropy
 cost = tf.reduce_mean(cross_entropy) ## 对所有实例的 cross entropy 求平均
 optimizer = tf.train.GradientDescentOptimizer(learning_rate = 0.5).minimize(cost)
 
@@ -83,5 +83,6 @@ udf.plot_images('error example', images = images[0:9], img_shape = img_shape, cl
 w = session.run(weights)
 udf.plot_weights('Weights', w, img_shape)
 
+session.close()
 sys.exit(0)
 
