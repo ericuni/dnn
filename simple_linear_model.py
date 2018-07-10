@@ -33,6 +33,11 @@ log.info(data.test.cls[0:5])
 udf.plot_images('test set example', images = data.test.images[0:9], img_shape = img_shape, cls_true = data.test.cls[0:9])
 
 # model definition
+'''
+Flattening the data throws away information about the 2D structure of the image. Isn't that bad?
+Well, the best computer vision methods do exploit this structure, and we will in later tutorials.
+But the simple method we will be using here, a softmax regression (dened below), won't.
+'''
 x = tf.placeholder(tf.float32, [None, img_size_flat]) ## num * 784, None means that the tensor may hold an arbitrary number of images
 y_true = tf.placeholder(tf.float32, [None, num_classes]) ## num * 10
 y_true_cls = tf.placeholder(tf.int64, [None]) ## num * 1

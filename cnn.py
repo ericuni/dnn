@@ -1,115 +1,145 @@
 #!/Library/Frameworks/Python.framework/Versions/3.6/bin/python3
 
-import logging
+#  Copyright 2016 The TensorFlow Authors. All Rights Reserved.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+"""Convolutional Neural Network Estimator for MNIST, built with tf.layers."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import numpy as np
-import sklearn as sk
-import sys
 import tensorflow as tf
-import time
-import udf
 
-logging.basicConfig(level = logging.DEBUG, format = '%(levelname)s %(asctime)s [%(filename)s][%(lineno)d][%(funcName)s] %(message)s')
-log = logging.getLogger()
+tf.logging.set_verbosity(tf.logging.INFO)
 
-log.info('tensorflow version: {0}'.format(tf.__version__))
+def cnn_model_fn(features, labels, mode):
+  """Model function for CNN."""
+  # Input Layer
+  # Reshape X to 4-D tensor: [batch_size, width, height, channels]
+  # MNIST images are 28x28 pixels, and have one color channel
+  input_layer = tf.reshape(features["x"], [-1, 28, 28, 1])
 
-# data set
-from tensorflow.examples.tutorials.mnist import input_data
-data = input_data.read_data_sets("data/MNIST/", one_hot = True)
-## 每个label 是一个10 个元素的vector, eg: [0. 0. 0. 0. 0. 0. 0. 1. 0. 0.] 将 7 点亮了, 因此label 是 7
+  # Convolutional Layer #1
+  # Computes 32 features using a 5x5 filter with ReLU activation.
+  # Padding is added to preserve width and height.
+  # Input Tensor Shape: [batch_size, 28, 28, 1]
+  # Output Tensor Shape: [batch_size, 28, 28, 32]
+  conv1 = tf.layers.conv2d(inputs=input_layer, filters=32, kernel_size=[5, 5], padding="same", activation=tf.nn.relu)
 
-log.info('data set brief:')
-log.info('train set: {0} {1}'.format(data.train.images.shape, data.train.labels.shape)) ## (55000, 784) (55000, 10)
-log.info('test set: {0} {1}'.format(data.test.images.shape, data.test.labels.shape))
-log.info('validation set: {0} {1}'.format(data.validation.images.shape, data.validation.labels.shape))
+  # Pooling Layer #1
+  # First max pooling layer with a 2x2 filter and stride of 2
+  # Input Tensor Shape: [batch_size, 28, 28, 32]
+  # Output Tensor Shape: [batch_size, 14, 14, 32]
+  pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
 
-img_size = 28
-img_size_flat = img_size * img_size
-img_shape = (img_size, img_size)
-num_channels = 1 ## number of colour channel for the images, 1 channel for gray-scale
-num_classes = 10 ## 0 - 9 共10 个数字
+  # Convolutional Layer #2
+  # Computes 64 features using a 5x5 filter.
+  # Padding is added to preserve width and height.
+  # Input Tensor Shape: [batch_size, 14, 14, 32]
+  # Output Tensor Shape: [batch_size, 14, 14, 64]
+  conv2 = tf.layers.conv2d(inputs=pool1, filters=64, kernel_size=[5, 5], padding="same", activation=tf.nn.relu)
 
-data.test.cls = np.array([np.argmax(label) for label in data.test.labels])
+  # Pooling Layer #2
+  # Second max pooling layer with a 2x2 filter and stride of 2
+  # Input Tensor Shape: [batch_size, 14, 14, 64]
+  # Output Tensor Shape: [batch_size, 7, 7, 64]
+  pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
 
-# model definition
-## convolution layer 1
-filter_size1 = 5 ## convolution filters are 5 * 5 pixels
-num_filters1 = 16
+  # Flatten tensor into a batch of vectors
+  # Input Tensor Shape: [batch_size, 7, 7, 64]
+  # Output Tensor Shape: [batch_size, 7 * 7 * 64]
+  pool2_flat = tf.reshape(pool2, [-1, 7 * 7 * 64])
 
-## convolution layer 2
-filter_size2 = 5
-num_filters2 = 36
+  # Dense Layer
+  # Densely connected layer with 1024 neurons
+  # Input Tensor Shape: [batch_size, 7 * 7 * 64]
+  # Output Tensor Shape: [batch_size, 1024]
+  dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu)
 
-## fully connected layer
-fc_size = 128
+  # Add dropout operation; 0.6 probability that element will be kept
+  dropout = tf.layers.dropout(inputs=dense, rate=0.4, training=mode == tf.estimator.ModeKeys.TRAIN)
 
-x = tf.placeholder(tf.float32, [None, img_size_flat], name = 'x') ## num * 784
-'''
-The convolutional layers expect x to be encoded as a 4-dim tensor so we have to reshape it so its shape is instead [num_images, img_height, img_width, num_channels].
--1 means that the number of images can be inferred automatically
-'''
-x_image = tf.reshape(x, [-1, img_size, img_size, num_channels])
-y_true = tf.placeholder(tf.float32, [None, num_classes]) ## num * 10
-y_true_cls = tf.argmax(y_true, axis = 1)
+  # Logits layer
+  # Input Tensor Shape: [batch_size, 1024]
+  # Output Tensor Shape: [batch_size, 10]
+  logits = tf.layers.dense(inputs=dropout, units=10)
 
-layer_conv1, weights_conv1 = udf.new_conv_layer(input = x_image, num_input_channels = num_channels, filter_size = filter_size1, num_filters = num_filters1, use_pooling = True)
-log.info('layer {0}: {1} {2}'.format('convolution layer 1', layer_conv1, weights_conv1))
-'''
-layer_conv1 with shape=(?, 14, 14, 16) and weights_conv1 with shape=(5, 5, 1, 16)
-'''
+  predictions = {
+      # Generate predictions (for PREDICT and EVAL mode)
+      "classes": tf.argmax(input=logits, axis=1),
+      # Add `softmax_tensor` to the graph. It is used for PREDICT and by the `logging_hook`.
+      "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
+  }
+  if mode == tf.estimator.ModeKeys.PREDICT:
+    return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
 
-layer_conv2, weights_conv2 = udf.new_conv_layer(input = layer_conv1, num_input_channels = num_filters1, filter_size = filter_size2, num_filters = num_filters2, use_pooling = True)
-log.info('layer {0}: {1} {2}'.format('convolution layer 2', layer_conv2, weights_conv2))
-'''
-layer_conv1 with shape=(?, 7, 7, 36) and weights_conv1 with shape=(5, 5, 16, 36)
-'''
+  # Calculate Loss (for both TRAIN and EVAL modes)
+  loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
 
-layer_flat, num_features = udf.flatten_layer(layer_conv2)
-log.info('layer {0}: {1} {2}'.format('flatten layer', layer_flat, num_features))
-## layer_flat with shape=(?, 1764), 1764 = 7 * 7 * 36
+  # Configure the Training Op (for TRAIN mode)
+  if mode == tf.estimator.ModeKeys.TRAIN:
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
+    train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
+    return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
 
-layer_fc1 = udf.new_fc_layer(input = layer_flat, num_inputs = num_features, num_outputs = fc_size, use_relu = True)
-log.info('layer {0}: {1}'.format('fully connected layer 1', layer_fc1))
-## layer_fc1 with shape=(?, 128)
+  # Add evaluation metrics (for EVAL mode)
+  eval_metric_ops = {"accuracy": tf.metrics.accuracy(labels=labels, predictions=predictions["classes"])}
+  return tf.estimator.EstimatorSpec(mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
-layer_fc2 = udf.new_fc_layer(input = layer_fc1, num_inputs = fc_size, num_outputs = num_classes, use_relu = False)
-log.info('layer {0}: {1}'.format('fully connected layer 2', layer_fc2))
-## layer_fc2 with shape=(?, 10)
 
-y_pred = tf.nn.softmax(layer_fc2)
-y_pred_cls = tf.argmax(y_pred, axis = 1)
+def main(unused_argv):
+  # Load training and eval data
+  ## mnist = tf.contrib.learn.datasets.load_dataset("mnist")
+  from tensorflow.examples.tutorials.mnist import input_data
+  mnist = input_data.read_data_sets("data/MNIST/")
+  train_data = mnist.train.images  # Returns np.array
+  train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
+  eval_data = mnist.test.images  # Returns np.array
+  eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
 
-cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(logits = layer_fc2, labels = y_true)
-cost = tf.reduce_mean(cross_entropy)
-optimizer = tf.train.AdamOptimizer(learning_rate = 1e-4).minimize(cost)
+  # Create the Estimator
+  mnist_classifier = tf.estimator.Estimator(model_fn=cnn_model_fn, model_dir="./mnist_convnet_model")
 
-correct_prediction = tf.equal(y_pred_cls, y_true_cls)
-accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+  # Set up logging for predictions
+  # Log the values in the "Softmax" tensor with label "probabilities"
+  ## tensors_to_log = {"probabilities": "softmax_tensor"}
+  tensors_to_log = {}
+  logging_hook = tf.train.LoggingTensorHook(tensors=tensors_to_log, every_n_iter=50)
 
-# model train
-batch_size = 64
-iterations = 200
-session = tf.Session()
-session.run(tf.global_variables_initializer())
-feed_dict_test = {x: data.test.images, y_true_cls: data.test.cls}
-time_start = time.time()
-for i in range(iterations):
-	x_batch, y_batch = data.train.next_batch(batch_size)
-	feed_dict_train = {x: x_batch, y_true: y_batch}
-	session.run(optimizer, feed_dict = feed_dict_train)
-	if i % 10 == 0 or i == iterations - 1:
-		acc = session.run(accuracy, feed_dict = feed_dict_test)
-		log.info('accuracy after {0} iterations: {1}'.format(i, acc))
-time_total = time.time() - time_start
-log.info('model train takes: %d secs' % time_total)
+  # Train the model
+  train_input_fn = tf.estimator.inputs.numpy_input_fn(
+      x={"x": train_data},
+      y=train_labels,
+      batch_size=100,
+      num_epochs=None,
+      shuffle=True)
+  mnist_classifier.train(
+      input_fn=train_input_fn,
+      steps=20000,
+      hooks=[logging_hook])
 
-# evaluation
-cls_true = data.test.cls
-cls_pred = session.run(y_pred_cls, feed_dict = feed_dict_test)
-cm = sk.metrics.confusion_matrix(y_true = cls_true, y_pred = cls_pred)
-log.info('Confusion matrix:\n {0}'.format(cm))
-udf.plot_confusion_matrix('Confusion matrix', cm, num_classes)
+  # Evaluate the model and print results
+  eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+      x={"x": eval_data},
+      y=eval_labels,
+      num_epochs=1,
+      shuffle=False)
+  eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
+  print(eval_results)
 
-session.close()
-sys.exit(0)
+
+if __name__ == "__main__":
+  tf.app.run()
 
