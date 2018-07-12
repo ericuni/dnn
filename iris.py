@@ -2,7 +2,6 @@ import os
 import pandas as pd
 import tensorflow as tf
 
-#设定仅输出警告提示，可改为INFO
 tf.logging.set_verbosity(tf.logging.INFO)
 
 FEATURES = ['SepalLength', 'SepalWidth','PetalLength', 'PetalWidth', 'Species']
@@ -35,7 +34,11 @@ classifier.train(input_fn=lambda:train_input_fn(train_x, train_y, batch_size), s
 
 #针对测试的喂食函数
 def eval_input_fn(features, labels, batch_size):
-	inputs = (dict(features), labels)
+	features = dict(features)
+	if labels is None:
+		inputs = features # No labels, use only features
+	else:
+		inputs = (features, labels)
 	dataset = tf.data.Dataset.from_tensor_slices(inputs)
 	dataset = dataset.batch(batch_size)
 	return dataset
@@ -44,23 +47,28 @@ def eval_input_fn(features, labels, batch_size):
 eval_result = classifier.evaluate(input_fn=lambda:eval_input_fn(test_x, test_y, batch_size))
 print(eval_result)
 
-predict_x = {'SepalLength': [2], 'SepalWidth': [5], 'PetalLength': [6], 'PetalWidth': [7]}
- 
-#进行预测
-predictions = classifier.predict(input_fn=lambda:eval_input_fn(predict_x, labels=[0], batch_size=batch_size))
+# Generate predictions from the model
+expected = ['Setosa', 'Versicolor', 'Virginica']
+predict_x = {
+	'SepalLength': [5.1, 5.9, 6.9],
+	'SepalWidth': [3.3, 3.0, 3.1],
+	'PetalLength': [1.7, 4.2, 5.4],
+	'PetalWidth': [0.5, 1.5, 2.1],
+}
 
-#预测结果是数组，尽管实际我们只有一个
-for pred_dict in predictions:
+predictions = classifier.predict(input_fn=lambda:eval_input_fn(predict_x, labels=None, batch_size=batch_size))
+
+for pred_dict, expec in zip(predictions, expected):
 	'''
 	print(pred_dict) result
 	{
-	    'logits': array([-16.18431473, 5.61845016, 13.43036652], dtype=float32),
-	    'probabilities': array([1.37509145e-13, 4.04717575e-04, 9.99595344e-01], dtype=float32),
-	    'class_ids': array([2]),
-	    'classes': array([b'2'], dtype=object)
+		'logits': array([-16.18431473, 5.61845016, 13.43036652], dtype=float32),
+		'probabilities': array([1.37509145e-13, 4.04717575e-04, 9.99595344e-01], dtype=float32),
+		'class_ids': array([2]),
+		'classes': array([b'2'], dtype=object)
 	}
 	'''
 	class_id = pred_dict['class_ids'][0]
 	probability = pred_dict['probabilities'][class_id]
-	print(SPECIES[class_id], 100 * probability)
+	print('{0} and predicted to be {1} with prob {2}'.format(expec, SPECIES[class_id], probability))
 
