@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf
+import sys
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -69,6 +70,7 @@ def cnn_model_fn(features, labels, mode):
   dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu)
 
   # Add dropout operation; 0.6 probability that element will be kept
+  # only valid in training
   dropout = tf.layers.dropout(inputs=dense, rate=0.4, training=mode == tf.estimator.ModeKeys.TRAIN)
 
   # Logits layer
@@ -104,8 +106,8 @@ def main(unused_argv):
   ## mnist = tf.contrib.learn.datasets.load_dataset("mnist")
   from tensorflow.examples.tutorials.mnist import input_data
   mnist = input_data.read_data_sets("data/MNIST/")
-  train_data = mnist.train.images  # Returns np.array
-  train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
+  train_data = mnist.train.images  # Returns np.array, 55000 * 784
+  train_labels = np.asarray(mnist.train.labels, dtype=np.int32) # 55000 * 1
   eval_data = mnist.test.images  # Returns np.array
   eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
 
