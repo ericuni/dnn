@@ -38,6 +38,7 @@ def my_model(features, labels, mode, params):
 	# Compute predictions.
 	predicted_classes = tf.argmax(logits, 1)
 	if mode == tf.estimator.ModeKeys.PREDICT:
+		''' what is tf.newaxis? '''
 		predictions = {
 			'class_ids': predicted_classes[:, tf.newaxis],
 			'probabilities': tf.nn.softmax(logits),
@@ -52,6 +53,10 @@ def my_model(features, labels, mode, params):
 	accuracy = tf.metrics.accuracy(labels=labels, predictions=predicted_classes, name='acc_op')
 	metrics = {'accuracy': accuracy}
 	tf.summary.scalar('accuracy', accuracy[1])
+	'''
+	accuracy[0]: Tensor("acc_op/value:0", shape=(), dtype=float32)
+	accuracy[1]: Tensor("acc_op/update_op:0", shape=(), dtype=float32)
+	'''
 
 	if mode == tf.estimator.ModeKeys.EVAL:
 		return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics)
