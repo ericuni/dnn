@@ -59,6 +59,7 @@ def cnn_model_fn(features, labels, mode):
 	# Flatten tensor into a batch of vectors
 	# Input Tensor Shape: [batch_size, 7, 7, 64]
 	# Output Tensor Shape: [batch_size, 7 * 7 * 64]
+	# we could also use pool2_flat = tf.contrib.layers.flatten(pool2)
 	pool2_flat = tf.reshape(pool2, [-1, 7 * 7 * 64])
 
 	# Dense Layer

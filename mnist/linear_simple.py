@@ -14,7 +14,7 @@ log.info('tensorflow version: {0}'.format(tf.__version__))
 
 # data set
 from tensorflow.examples.tutorials.mnist import input_data
-data = input_data.read_data_sets("data/MNIST/", one_hot = True)
+data = input_data.read_data_sets("./data", one_hot = True)
 ## 每个label 是一个10 个元素的vector, eg: [0. 0. 0. 0. 0. 0. 0. 1. 0. 0.] 将 7 点亮了, 因此label 是 7
 
 log.info('data set brief:')
