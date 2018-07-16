@@ -55,17 +55,54 @@ cls_pred = np.argmax(y_pred, axis=1)
 print('true: {}'.format(cls_true))
 print('pred: {}'.format(cls_pred))
 
+print(model.summary())
+'''
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #
+=================================================================
+reshape (Reshape)            (None, 28, 28, 1)         0
+_________________________________________________________________
+layer_conv1 (Conv2D)         (None, 28, 28, 16)        416 = 5 * 5 * 16 + 16
+_________________________________________________________________
+max_pooling2d (MaxPooling2D) (None, 14, 14, 16)        0
+_________________________________________________________________
+layer_conv2 (Conv2D)         (None, 14, 14, 36)        14436 = 5 * 5 * 16 * 36 + 36
+_________________________________________________________________
+max_pooling2d_1 (MaxPooling2 (None, 7, 7, 36)          0
+_________________________________________________________________
+flatten (Flatten)            (None, 1764)              0
+_________________________________________________________________
+dense (Dense)                (None, 128)               225920 = 1764 * 128 + 128
+_________________________________________________________________
+dense_1 (Dense)              (None, 10)                1290 = 128 * 10 + 10
+=================================================================
+Total params: 242,062
+Trainable params: 242,062
+Non-trainable params: 0
+
+<tensorflow.python.keras.layers.core.Reshape object at 0x128c7c898>,
+<tensorflow.python.keras.layers.convolutional.Conv2D object at 0x128c7c518>,
+<tensorflow.python.keras.layers.pooling.MaxPooling2D object at 0x128c7c940>,
+<tensorflow.python.keras.layers.convolutional.Conv2D object at 0x1321bf9e8>,
+<tensorflow.python.keras.layers.pooling.MaxPooling2D object at 0x1321ebcf8>,
+<tensorflow.python.keras.layers.core.Flatten object at 0x1321ebf98>,
+<tensorflow.python.keras.layers.core.Dense object at 0x1321ebd30>,
+<tensorflow.python.keras.layers.core.Dense object at 0x1321ebfd0>]
+'''
+
+layer_conv1 = model.layers[1]
+weights_conv1 = layer_conv1.get_weights()[0]
+print('conv1 weights shape: {}'.format(weights_conv1.shape)) ## [5, 5, 1, 16]
+input_channels = weights_conv1.shape[2]
+for i in range(input_channels):
+    udf.plot_conv_weights('conv1 weights of channel {}'.format(i), weights=weights_conv1, input_channel=i, save_name='conv1_weights_channel_{}.png'.format(i))
+
+layer_conv2 = model.layers[3]
+weights_conv2 = layer_conv2.get_weights()[0]
+print('conv2 weights shape: {}'.format(weights_conv2.shape)) ## [5, 5, 16, 36]
+input_channels = weights_conv2.shape[2]
+for i in range(input_channels):
+    udf.plot_conv_weights('conv2 weights of channel {}'.format(i), weights=weights_conv2, input_channel=i, save_name='conv2_weights_channel_{}.png'.format(i))
+
 sys.exit(0)
-
-# needs `pip3 install --upgrade h5py` to save model 
-path_model = 'model.keras'
-model.save(path_model)
-del model
-
-from tensorflow.python.keras.models import load_model
-model3 = load_model(path_model) ## load will error
-images = data.test.images[0:9]
-y_pred = model3.predict(x=images)
-cls_pred = np.argmax(y_pred, axis=1)
-udf.plot_images(images=images, cls_pred=cls_pred, cls_true=cls_true)
 
