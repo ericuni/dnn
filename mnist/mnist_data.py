@@ -19,6 +19,7 @@ def load_data():
 	## 为了方便之后的比较, 把hot vector 转换为一个数字
 	data.train.cls = np.array([np.argmax(label) for label in data.train.labels])
 	data.test.cls = np.array([np.argmax(label) for label in data.test.labels])
+	data.validation.cls = np.array([np.argmax(label) for label in data.validation.labels])
 
 	return data
 
