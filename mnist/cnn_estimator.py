@@ -22,6 +22,7 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 import sys
+from mnist_data import *
 
 def cnn_model_fn(features, labels, mode):
 	"""Model function for CNN."""
@@ -102,13 +103,7 @@ def cnn_model_fn(features, labels, mode):
 
 def main(unused_argv):
 	# Load training and eval data
-	## mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-	from tensorflow.examples.tutorials.mnist import input_data
-	mnist = input_data.read_data_sets("./data")
-	train_data = mnist.train.images	# Returns np.array, 55000 * 784
-	train_labels = np.asarray(mnist.train.labels, dtype=np.int32) # 55000 * 1
-	eval_data = mnist.test.images	# Returns np.array
-	eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
+	data = load_data()
 
 	# Create the Estimator
 	mnist_classifier = tf.estimator.Estimator(model_fn=cnn_model_fn, model_dir="./model")
@@ -120,11 +115,11 @@ def main(unused_argv):
 	logging_hook = tf.train.LoggingTensorHook(tensors=tensors_to_log, every_n_iter=50)
 
 	# Train the model
-	train_input_fn = tf.estimator.inputs.numpy_input_fn(x={"x": train_data}, y=train_labels, batch_size=100, num_epochs=None, shuffle=True)
+	train_input_fn = tf.estimator.inputs.numpy_input_fn(x={"x": data.train.images}, y=data.train.cls, batch_size=100, num_epochs=None, shuffle=True)
 	mnist_classifier.train(input_fn=train_input_fn, steps=500, hooks=[logging_hook])
 
 	# Evaluate the model and print results
-	eval_input_fn = tf.estimator.inputs.numpy_input_fn(x={"x": eval_data}, y=eval_labels, num_epochs=1, shuffle=False)
+	eval_input_fn = tf.estimator.inputs.numpy_input_fn(x={"x": data.test.images}, y=data.test.cls, num_epochs=1, shuffle=False)
 	eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
 	print(eval_results)
 

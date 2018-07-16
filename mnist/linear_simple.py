@@ -6,31 +6,14 @@ import sklearn as sk
 import sys
 import tensorflow as tf
 import udf
+from mnist_data import *
 
 logging.basicConfig(level = logging.DEBUG, format = '%(levelname)s %(asctime)s [%(filename)s][%(lineno)d][%(funcName)s] %(message)s')
 log = logging.getLogger()
 
 log.info('tensorflow version: {0}'.format(tf.__version__))
 
-# data set
-from tensorflow.examples.tutorials.mnist import input_data
-data = input_data.read_data_sets("./data", one_hot = True)
-## 每个label 是一个10 个元素的vector, eg: [0. 0. 0. 0. 0. 0. 0. 1. 0. 0.] 将 7 点亮了, 因此label 是 7
-
-log.info('data set brief:')
-log.info('train set: {0} {1}'.format(data.train.images.shape, data.train.labels.shape)) ## (55000, 784) (55000, 10)
-log.info('test set: {0} {1}'.format(data.test.images.shape, data.test.labels.shape))
-log.info('validation set: {0} {1}'.format(data.validation.images.shape, data.validation.labels.shape))
-
-img_size = 28
-img_size_flat = img_size * img_size
-img_shape = (img_size, img_size)
-num_classes = 10 ## 0 - 9 共10 个数字
-
-## 为了方便之后的比较, 把hot vector 转换为一个数字
-data.test.cls = np.array([np.argmax(label) for label in data.test.labels])
-log.info(data.test.cls[0:5])
-udf.plot_images('test set example', images = data.test.images[0:9], img_shape = img_shape, cls_true = data.test.cls[0:9])
+data = load_data()
 
 # model definition
 '''
