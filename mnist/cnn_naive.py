@@ -149,3 +149,37 @@ result = session.run(y_pred_cls, feed_dict = {x: data.validation.images[0:19]})
 print('true: {}'.format(data.validation.cls[0:19]))
 print('pred: {}'.format(result))
 
+## Visualization of Weights and Layers
+image1 = data.test.images[0]
+label1 = data.test.cls[0]
+udf.plot_image(image1, img_shape)
+
+image2 = data.test.images[13]
+label2 = data.test.cls[13]
+udf.plot_image(image2, img_shape)
+
+w = session.run(weights_conv1)
+print('weights_conv1 shape: {}'.format(w.shape)) ## (5, 5, 1, 16)
+udf.plot_conv_weights('conv1 weights', weights=w)
+
+values = session.run(layer_conv1, feed_dict={x: [image1]})
+udf.plot_conv_output('conv1 output of {}'.format(label1), values)
+
+values = session.run(layer_conv1, feed_dict={x: [image2]})
+udf.plot_conv_output('conv1 output of {}'.format(label2), values)
+
+w = session.run(weights_conv2)
+print('weights_conv2 shape: {}'.format(w.shape)) ## (5, 5, 16, 36)
+udf.plot_conv_weights('conv2 weights of channel 0', weights=w, input_channel=0)
+## There are 16 input channels to the second convolutional layer, so we can make another 15 plots of filter-weights like this.
+## We just make one more with the filter-weights for the second channel.
+udf.plot_conv_weights('conv2 weights of channel 1', weights=w, input_channel=1)
+
+values = session.run(layer_conv2, feed_dict={x: [image1]})
+udf.plot_conv_output('conv2 output of {}'.format(label1), values)
+
+values = session.run(layer_conv2, feed_dict={x: [image2]})
+udf.plot_conv_output('conv2 output of {}'.format(label2), values)
+
+session.close()
+

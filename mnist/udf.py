@@ -75,6 +75,7 @@ def plot_conv_weights(title, weights, input_channel=0, save_name=None):
 	w_max = np.max(weights)
 
 	# Number of filters used in the conv. layer.
+	# shape = [filter_size, filter_size, num_input_channels, num_filters]
 	num_filters = weights.shape[3]
 
 	# Number of grids to plot.
