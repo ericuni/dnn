@@ -67,6 +67,7 @@ def plot_weights(title, weights, img_shape):
 	plt.suptitle(title)
 	plt.show()
 
+
 def plot_conv_weights(title, weights, input_channel=0, save_name=None):
 	# Get the lowest and highest values for the weights.
 	# This is used to correct the colour intensity across the images so they can be compared with each other.
@@ -101,6 +102,49 @@ def plot_conv_weights(title, weights, input_channel=0, save_name=None):
 	plt.suptitle(title)
 	if save_name is not None:
 		plt.savefig(save_name)
+		plt.close()
 	else:
 		plt.show()
+
+
+'''
+values: [channels, width, height, filters]
+in this function, channels is set 0
+'''
+def plot_conv_output(title, values, save_name=None):
+	# Number of filters used in the conv. layer.
+	num_filters = values.shape[3]
+
+	# Number of grids to plot.
+	# Rounded-up, square-root of the number of filters.
+	num_grids = math.ceil(math.sqrt(num_filters))
+
+	# Create figure with a grid of sub-plots.
+	fig, axes = plt.subplots(num_grids, num_grids)
+
+	# Plot the output images of all the filters.
+	for i, ax in enumerate(axes.flat):
+		# Only plot the images for valid filters.
+		if i < num_filters:
+			# Get the output image of using the i'th filter.
+			img = values[0, :, :, i]
+
+			# Plot image.
+			ax.imshow(img, interpolation='nearest', cmap='binary')
+
+		# Remove ticks from the plot.
+		ax.set_xticks([])
+		ax.set_yticks([])
+
+	plt.suptitle(title)
+	if save_name is not None:
+		plt.savefig(save_name)
+		plt.close()
+	else:
+		plt.show()
+
+
+def plot_image(image, img_shape):
+	plt.imshow(image.reshape(img_shape), interpolation='nearest', cmap='binary')
+	plt.show()
 

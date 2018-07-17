@@ -95,14 +95,28 @@ weights_conv1 = layer_conv1.get_weights()[0]
 print('conv1 weights shape: {}'.format(weights_conv1.shape)) ## [5, 5, 1, 16]
 input_channels = weights_conv1.shape[2]
 for i in range(input_channels):
-    udf.plot_conv_weights('conv1 weights of channel {}'.format(i), weights=weights_conv1, input_channel=i, save_name='conv1_weights_channel_{}.png'.format(i))
+	name = 'conv1_weights_of_channel_{}'.format(i)
+	print('plotting {}'.format(name))
+	udf.plot_conv_weights(name, weights=weights_conv1, input_channel=i, save_name='{}.png'.format(name))
 
 layer_conv2 = model.layers[3]
 weights_conv2 = layer_conv2.get_weights()[0]
 print('conv2 weights shape: {}'.format(weights_conv2.shape)) ## [5, 5, 16, 36]
 input_channels = weights_conv2.shape[2]
 for i in range(input_channels):
-    udf.plot_conv_weights('conv2 weights of channel {}'.format(i), weights=weights_conv2, input_channel=i, save_name='conv2_weights_channel_{}.png'.format(i))
+	name = 'conv2_weights_of_channel_{}'.format(i)
+	print('plotting {}'.format(name))
+	udf.plot_conv_weights(name, weights=weights_conv2, input_channel=i, save_name='{}.png'.format(name))
+
+image1 = data.test.images[0]
+udf.plot_image(image1, img_shape)
+output_conv1 = keras.backend.function(inputs=[model.layers[0].input], outputs=[layer_conv1.output])
+layer_output1 = output_conv1([[image1]])[0]
+print('layer_output1.shape: {}'.format(layer_output1.shape)) ## layer_output1.shape: (1, 28, 28, 16)
+udf.plot_conv_output('layer_output1', values=layer_output1)
+
+output_conv2 = keras.backend.function(inputs=[model.layers[2].input], outputs=[layer_conv2.output])
+print(output_conv2)
 
 sys.exit(0)
 

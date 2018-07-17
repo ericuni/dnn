@@ -6,6 +6,7 @@ img_size = 28
 img_size_flat = img_size * img_size
 img_shape = (img_size, img_size)
 num_classes = 10 ## 0 - 9 共10 个数字
+num_channels = 1
 
 def load_data():
 	data = input_data.read_data_sets("./data", one_hot = True)
